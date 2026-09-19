@@ -20,7 +20,6 @@ lb config noauto \
     --bootloaders "grub-efi syslinux" \
     --uefi-secure-boot enable \
     --chroot-squashfs-compression-type zstd \
-    --chroot-squashfs-compression-level 19 \
     --bootappend-live "boot=live components quiet locales=hu_HU.UTF-8 keyboard-layouts=hu timezone=Europe/Budapest username=diak user-fullname=Diák hostname=iskolinux" \
     --image-name "iskolinux-${DISTRO_VERSION}" \
     --iso-application "$DISTRO_NAME" \
