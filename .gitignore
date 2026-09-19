@@ -1,0 +1,19 @@
+# live-build által generált fájlok és építési kimenet
+.build/
+cache/
+chroot/
+binary/
+out/
+*.iso
+*.contents
+*.files
+*.packages
+build.log
+config/binary
+config/bootstrap
+config/chroot
+config/common
+config/source
+config/includes.chroot_after_packages/etc/iskolinux/build.conf
+config/archives/kernel-backports.pref.*
+config/includes.chroot_after_packages/usr/share/iskolinux/images/

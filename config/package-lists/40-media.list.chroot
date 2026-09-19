@@ -1,0 +1,8 @@
+# Videó- és hangszerkesztés, lejátszás, kodekek
+openshot-qt
+audacity
+vlc
+ffmpeg
+gstreamer1.0-plugins-ugly
+gstreamer1.0-plugins-bad
+gstreamer1.0-libav

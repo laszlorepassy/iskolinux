@@ -1,0 +1,29 @@
+#!/bin/sh
+# live-build beállítások – a build.sh hívja (lb config)
+set -e
+. ./config/iskolinux.conf
+
+BACKPORTS=false
+[ "$BACKPORTS_KERNEL" = 1 ] && BACKPORTS=true
+
+lb config noauto \
+    --distribution trixie \
+    --architecture amd64 \
+    --archive-areas "main contrib non-free non-free-firmware" \
+    --security true \
+    --updates true \
+    --backports "$BACKPORTS" \
+    --apt-recommends true \
+    --debian-installer none \
+    --firmware-chroot true \
+    --firmware-binary false \
+    --bootloaders "grub-efi syslinux" \
+    --uefi-secure-boot enable \
+    --chroot-squashfs-compression-type zstd \
+    --chroot-squashfs-compression-level 19 \
+    --bootappend-live "boot=live components quiet locales=hu_HU.UTF-8 keyboard-layouts=hu timezone=Europe/Budapest username=diak user-fullname=Diák hostname=iskolinux" \
+    --image-name "iskolinux-${DISTRO_VERSION}" \
+    --iso-application "$DISTRO_NAME" \
+    --iso-volume "ISKOLINUX_${DISTRO_VERSION}" \
+    --iso-publisher "$DISTRO_NAME" \
+    "$@"

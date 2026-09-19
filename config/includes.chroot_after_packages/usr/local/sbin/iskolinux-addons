@@ -1,0 +1,122 @@
+#!/bin/bash
+# IskoLinux – kiegészítők telepítése. Ezek nincsenek az ISO-ban: vagy a licencük nem
+# engedi a továbbterjesztést, vagy nagyok, és nem minden gépre kellenek. Csak akkor
+# kerülnek a gépre, ha a rendszergazda lefuttatja ezt a parancsot.
+#
+# Használat:
+#   sudo iskolinux-addons                 minden csoport
+#   sudo iskolinux-addons java            csak a megadott csoportok
+#
+# Csoportok:
+#   base     VS Code + érettségin használt bővítmények (Python, Pylance, Live Server, C#),
+#            .NET SDK (C#), Microsoft-fontok, PyCharm – nem terjeszthetők tovább
+#   java     IntelliJ IDEA, NetBeans (Flathub)
+#
+# A telepített gépen, rendszergazdaként futtatandó (internetkapcsolat kell).
+# Nyugodtan futtatható többször is.
+set -euo pipefail
+
+CSOPORTOK=(base java)
+
+if [ "${1:-}" = "-h" ] || [ "${1:-}" = "--help" ]; then
+    sed -n '2,16p' "$0" | sed 's/^# \{0,1\}//'
+    exit 0
+fi
+
+kert=("$@")
+[ ${#kert[@]} -gt 0 ] || kert=("${CSOPORTOK[@]}")
+for cs in "${kert[@]}"; do
+    [[ " ${CSOPORTOK[*]} " == *" $cs "* ]] || {
+        echo "Ismeretlen csoport: $cs (lehetséges: ${CSOPORTOK[*]})" >&2; exit 1; }
+done
+kell() { [[ " ${kert[*]} " == *" $1 "* ]]; }
+
+if [ "$(id -u)" -ne 0 ]; then
+    exec pkexec "$0" "$@"
+fi
+
+export DEBIAN_FRONTEND=noninteractive
+
+flathub() {
+    flatpak remote-add --system --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+    # Csak magyar és angol fordítások (a *.Locale csomagok egyébként több GB-osak)
+    flatpak config --system --set languages "hu;en"
+    flatpak install --system -y --noninteractive flathub "$@"
+}
+
+VSCODE_EXTENSIONS=(
+    ms-python.python
+    ms-python.vscode-pylance
+    ritwickdey.LiveServer
+    ms-dotnettools.csharp
+    ms-dotnettools.csdevkit
+)
+
+apt-get update
+
+if kell base; then
+    echo ">>> Microsoft-fontok"
+    echo "ttf-mscorefonts-installer msttcorefonts/accepted-mscorefonts-eula select true" | debconf-set-selections
+    apt-get install -y ttf-mscorefonts-installer
+
+    echo ">>> Microsoft-tárolók (VS Code, .NET)"
+    install -d -m 0755 /etc/apt/keyrings
+    curl -fsSL https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor --yes -o /etc/apt/keyrings/microsoft.gpg
+    cat > /etc/apt/sources.list.d/vscode.sources <<'EOF'
+Types: deb
+URIs: https://packages.microsoft.com/repos/code
+Suites: stable
+Components: main
+Architectures: amd64
+Signed-By: /etc/apt/keyrings/microsoft.gpg
+EOF
+    . /etc/os-release
+    cat > /etc/apt/sources.list.d/microsoft-prod.sources <<EOF
+Types: deb
+URIs: https://packages.microsoft.com/debian/${VERSION_ID}/prod
+Suites: ${VERSION_CODENAME}
+Components: main
+Architectures: amd64
+Signed-By: /etc/apt/keyrings/microsoft.gpg
+EOF
+    # A code csomag ne írja felül a fenti tárolóbeállítást
+    echo "code code/add-microsoft-repo boolean false" | debconf-set-selections
+    apt-get update
+
+    echo ">>> Visual Studio Code és .NET SDK (C#)"
+    apt-get install -y code dotnet-sdk-10.0
+
+    echo ">>> VS Code bővítmények (minden új felhasználónak: /etc/skel)"
+    EXT_DIR=/etc/skel/.vscode/extensions
+    TMP_DATA=$(mktemp -d)
+    install -d "$EXT_DIR"
+    for ext in "${VSCODE_EXTENSIONS[@]}"; do
+        code --no-sandbox --user-data-dir "$TMP_DATA" --extensions-dir "$EXT_DIR" \
+             --install-extension "$ext" --force || echo "FIGYELEM: $ext telepítése nem sikerült"
+    done
+    rm -rf "$TMP_DATA"
+
+    # Már létező felhasználóknak is odamásoljuk
+    for home in /home/*; do
+        [ -d "$home" ] || continue
+        user=$(stat -c %U "$home")
+        id "$user" >/dev/null 2>&1 || continue
+        install -d -o "$user" -g "$user" "$home/.vscode"
+        cp -a "$EXT_DIR" "$home/.vscode/"
+        chown -R "$user:$user" "$home/.vscode"
+    done
+
+    echo ">>> PyCharm"
+    flathub com.jetbrains.PyCharm-Professional
+fi
+
+if kell java; then
+    echo ">>> IntelliJ IDEA és NetBeans"
+    flathub com.jetbrains.IntelliJ-IDEA-Community org.apache.netbeans
+fi
+
+install -d /var/lib/iskolinux
+for cs in "${kert[@]}"; do
+    touch "/var/lib/iskolinux/addons-$cs"
+done
+echo ">>> Kész."

@@ -1,0 +1,7 @@
+[Desktop Entry]
+Type=Application
+Name=Kiegészítők telepítése
+Comment=VS Code, PyCharm, Java-fejlesztőkörnyezetek, Microsoft-fontok letöltése (internet kell hozzá)
+Exec=konsole --hold -e /usr/local/sbin/iskolinux-addons
+Icon=system-software-install
+Categories=System;Settings;

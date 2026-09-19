@@ -1,0 +1,93 @@
+#!/bin/bash
+# IskoLinux testreszabás – a live-build a csomagok és az includes.chroot_after_packages
+# bemásolása után futtatja, az élő rendszer chrootjában.
+#
+# A rendszer Debian marad a saját nevével és kinézetével (telepítő, rendszerindító
+# menü, bejelentkezőképernyő stb.). Az IskoLinux csak előre telepít és beállít;
+# felismerni az /etc/iskolinux-release fájlról lehet.
+set -euo pipefail
+
+. /etc/iskolinux/build.conf
+
+export DEBIAN_FRONTEND=noninteractive
+export LC_ALL=C.UTF-8
+
+log() { printf '\n>>> %s\n' "$*"; }
+
+log "Flathub-alkalmazások"
+flatpak remote-add --system --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+# Csak magyar és angol fordítások (a *.Locale csomagok egyébként több GB-osak)
+flatpak config --system --set languages "hu;en"
+mapfile -t FLATPAKS < <(sed -e 's/#.*//' -e 's/[[:space:]]//g' /usr/share/iskolinux/flatpaks.list | grep -v '^$')
+if [ "${#FLATPAKS[@]}" -gt 0 ]; then
+    flatpak install --system -y --noninteractive flathub "${FLATPAKS[@]}"
+fi
+
+log "Fölösleges, csak ajánlásként behúzott csomagok eltávolítása (ISO-méret)"
+# Noto *-extra: ritka írásrendszerek és betűváltozatok (~600 MB; a Noto alapfontok maradnak),
+# Marvell Prestera: hálózati kapcsolók firmware-e, fortune: szöveges idézetgyűjtemény
+FOLOSLEGES=(fonts-noto-extra fonts-noto-cjk-extra fonts-noto-ui-extra fonts-noto-unhinted
+            firmware-marvell-prestera fortune-mod fortunes-debian-hints)
+mapfile -t TOROLNI < <(dpkg-query -W -f '${db:Status-Status} ${Package}\n' "${FOLOSLEGES[@]}" 2>/dev/null \
+                       | awk '$1 == "installed" { print $2 }')
+if [ "${#TOROLNI[@]}" -gt 0 ]; then
+    apt-get purge -y "${TOROLNI[@]}"
+fi
+
+log "Magyar nyelv, billentyűzet, időzóna (a telepített rendszer alapértéke is)"
+[ -f /etc/locale.gen ] && sed -i -E 's/^# *(hu_HU.UTF-8 UTF-8)/\1/' /etc/locale.gen
+locale-gen
+update-locale LANG=hu_HU.UTF-8 LANGUAGE=hu:en
+[ -f /etc/default/keyboard ] && sed -i -E 's/^XKBLAYOUT=.*/XKBLAYOUT="hu"/' /etc/default/keyboard
+ln -sf /usr/share/zoneinfo/Europe/Budapest /etc/localtime
+echo Europe/Budapest > /etc/timezone
+
+# A telepítő (Calamares) alapértelmezett időzónája
+for f in /etc/calamares/modules/locale.conf /usr/share/calamares/modules/locale.conf; do
+    [ -f "$f" ] || continue
+    sed -i -E 's/^(\s*region:).*/\1 "Europe"/; s/^(\s*zone:).*/\1 "Budapest"/' "$f"
+done
+
+log "Takarékos KDE-alapbeállítások (minden felhasználónak, /etc/xdg)"
+kw() { kwriteconfig6 --file "/etc/xdg/$1" --group "$2" --key "$3" "$4"; }
+kw baloofilerc "Basic Settings" "Indexing-Enabled" false   # fájlindexelés ki
+kw kwinrc Plugins blurEnabled false                        # elmosás ki
+kw kwinrc Plugins contrastEnabled false                    # háttér-kontraszt effekt ki
+kw kdeglobals KDE AnimationDurationFactor 0.5              # rövidebb animációk
+kw ksplashrc KSplash Theme None                            # nincs KDE-betöltőképernyő
+kw kdeglobals Translations LANGUAGE hu:en
+
+log "Adatbázis- és webszerver ne induljon automatikusan (RAM-takarékosság)"
+systemctl disable mariadb.service apache2.service || true
+
+# A tovább nem terjeszthető programok (VS Code, PyCharm, Microsoft-fontok…) NEM kerülnek
+# az ISO-ba: telepítés után a „sudo iskolinux-addons” paranccsal tölthetők le.
+
+log "IskoLinux háttérképek (felirat és építési dátum)"
+BR=/usr/share/iskolinux/images
+DATUM=$(date +%Y.%m.%d.)
+for pair in IskoLinuxTabla:hatter-tabla IskoLinuxFuzet:hatter-fuzet; do
+    dir=/usr/share/wallpapers/${pair%%:*}/contents
+    install -d "$dir/images"   # a git üres mappát nem tárol, ezért itt hozzuk létre
+    svg=$(mktemp --suffix=.svg)
+    sed "s/@BUILD_DATE@/$DATUM/" "$BR/${pair#*:}.svg" > "$svg"
+    for res in 1366x768 1920x1080 2560x1440 3840x2160; do
+        rsvg-convert -w "${res%x*}" -h "${res#*x}" "$svg" -o "$dir/images/$res.png"
+    done
+    cp "$dir/images/1920x1080.png" "$dir/screenshot.png"
+    rm -f "$svg"
+done
+
+log "Rendszermentés: egy mentés a telepítés után (első induláskor), a többi csak kézzel"
+# Programtelepítéskor a snapper ne készítsen magától mentést.
+echo 'DISABLE_APT_SNAPSHOT="yes"' >> /etc/default/snapper
+systemctl enable iskolinux-snapshot-setup.service
+
+log "Kiadásinformáció (ellenőrzés: cat /etc/iskolinux-release)"
+cat > /etc/iskolinux-release <<EOF
+NAME="${DISTRO_NAME}"
+VERSION="${DISTRO_VERSION}"
+BASE="Debian ${DISTRO_VERSION}"
+BUILD_DATE="$(date -u +%Y-%m-%d)"
+EOF
+rm -f /etc/iskolinux/build.conf

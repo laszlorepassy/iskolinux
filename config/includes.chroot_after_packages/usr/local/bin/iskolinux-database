@@ -1,0 +1,41 @@
+#!/bin/bash
+# Adatbázis-szerver (MariaDB + Apache/phpMyAdmin) indítása és leállítása.
+# Alapból nem indulnak el a gép indulásakor, hogy gyenge gépen se foglaljanak memóriát.
+# Használat: iskolinux-database start|stop|status
+set -euo pipefail
+
+action=${1:-start}
+
+if [ "$action" != status ] && [ "$(id -u)" -ne 0 ]; then
+    if pkexec "$0" "$action"; then
+        case $action in
+            start) msg="Az adatbázis-szerver fut. phpMyAdmin: http://localhost/phpmyadmin (felhasználó: root, jelszó nélkül)" ;;
+            stop)  msg="Az adatbázis-szerver leállt." ;;
+        esac
+        command -v kdialog >/dev/null && kdialog --title "Adatbázis-szerver" --passivepopup "$msg" 6 || echo "$msg"
+    fi
+    exit
+fi
+
+case $action in
+    start)
+        systemctl start mariadb apache2
+        # Első indításkor az XAMPP-hoz hasonló beállítás: root jelszó nélkül,
+        # csak helyi gépről (a MariaDB alapból csak 127.0.0.1-en figyel).
+        if [ ! -e /var/lib/iskolinux/database-configured ]; then
+            mariadb -e "ALTER USER 'root'@'localhost' IDENTIFIED VIA unix_socket OR mysql_native_password USING PASSWORD('');"
+            install -d /var/lib/iskolinux
+            touch /var/lib/iskolinux/database-configured
+        fi
+        ;;
+    stop)
+        systemctl stop apache2 mariadb
+        ;;
+    status)
+        systemctl is-active mariadb apache2
+        ;;
+    *)
+        echo "Használat: $0 start|stop|status" >&2
+        exit 1
+        ;;
+esac

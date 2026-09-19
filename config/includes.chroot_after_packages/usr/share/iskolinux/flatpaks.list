@@ -1,0 +1,3 @@
+# Szabad licencű Flathub-alkalmazások, amelyek az ISO-ba kerülnek (soronként egy azonosító).
+# Jelenleg üres: a Flatpak-futtatókörnyezetek több GB-osak, ezért a Flathub-programok
+# (IntelliJ IDEA, NetBeans…) a kiegészítők között vannak.

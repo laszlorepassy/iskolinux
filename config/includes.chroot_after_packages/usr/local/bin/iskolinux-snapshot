@@ -1,0 +1,34 @@
+#!/bin/bash
+# Kézi rendszermentés (Btrfs-pillanatkép) készítése.
+# Használat: iskolinux-snapshot ["leírás"]
+# Leírás nélkül grafikus felületen rákérdez, parancssorban az aktuális dátumot használja.
+set -euo pipefail
+
+leiras=${1:-}
+alap="Kézi mentés – $(date '+%Y. %m. %d. %H:%M')"
+
+if [ "$(id -u)" -ne 0 ]; then
+    if [ -z "$leiras" ] && [ -n "${DISPLAY:-}${WAYLAND_DISPLAY:-}" ] && command -v kdialog >/dev/null; then
+        leiras=$(kdialog --title "Rendszermentés" \
+            --inputbox "Mi legyen a mentés neve? (pl. „Tanév eleje”, „Nyomtató beállítva”)" "$alap") || exit 0
+    fi
+    if pkexec "$0" "${leiras:-$alap}"; then
+        uzenet="A rendszermentés elkészült: ${leiras:-$alap}"
+        command -v kdialog >/dev/null && [ -n "${DISPLAY:-}${WAYLAND_DISPLAY:-}" ] \
+            && kdialog --title "Rendszermentés" --passivepopup "$uzenet" 6 || echo "$uzenet"
+    else
+        command -v kdialog >/dev/null && [ -n "${DISPLAY:-}${WAYLAND_DISPLAY:-}" ] \
+            && kdialog --title "Rendszermentés" --error "A mentés nem készült el." || echo "A mentés nem készült el." >&2
+        exit 1
+    fi
+    exit 0
+fi
+
+if [ "$(findmnt -no FSTYPE /)" != btrfs ]; then
+    echo "A rendszermentés csak Btrfs fájlrendszeren működik (ez a gép nem azzal lett telepítve)." >&2
+    exit 1
+fi
+[ -e /etc/snapper/configs/root ] || /usr/local/libexec/iskolinux-snapshot-setup
+
+snapper -c root create --description "${leiras:-$alap}" --cleanup-algorithm number --userdata "manual=yes"
+echo "Kész: ${leiras:-$alap}"

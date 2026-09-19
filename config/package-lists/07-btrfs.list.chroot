@@ -1,0 +1,6 @@
+# Btrfs: fájlrendszer-eszközök és rendszermentés (snapper + Btrfs Assistant).
+# Automatikus mentés nincs: egy mentés a telepítés után, a többi kézzel.
+btrfs-progs
+snapper
+btrfs-assistant
+btrfsmaintenance

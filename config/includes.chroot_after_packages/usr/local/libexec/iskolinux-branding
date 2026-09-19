@@ -1,0 +1,27 @@
+#!/bin/bash
+# Az IskoLinux háttérkép beállítása a felhasználónak (egyszer, első bejelentkezéskor).
+# Erről a háttérképről (IskoLinux felirat, építési dátum) ismerhető fel, hogy a gépen
+# IskoLinux fut; a rendszer többi része a Debian eredeti kinézetét tartja meg.
+# A Plasma alapértelmezéseit csak futó plasmashellen keresztül lehet megbízhatóan
+# módosítani, ezért automatikus indításból fut.
+MARKER="${XDG_CONFIG_HOME:-$HOME/.config}/iskolinux-branding-v1"
+[ -e "$MARKER" ] && exit 0
+
+read -r -d '' SCRIPT <<'JS'
+desktops().forEach(function (d) {
+    d.wallpaperPlugin = "org.kde.image";
+    d.currentConfigGroup = ["Wallpaper", "org.kde.image", "General"];
+    d.writeConfig("Image", "file:///usr/share/wallpapers/IskoLinuxTabla/");
+});
+JS
+
+# Megvárjuk, míg a Plasma asztal elindul (legfeljebb 60 mp)
+for _ in $(seq 60); do
+    if dbus-send --session --print-reply --dest=org.kde.plasmashell /PlasmaShell \
+         org.kde.PlasmaShell.evaluateScript string:"$SCRIPT" >/dev/null 2>&1; then
+        mkdir -p "$(dirname "$MARKER")" && touch "$MARKER"
+        exit 0
+    fi
+    sleep 1
+done
+exit 1

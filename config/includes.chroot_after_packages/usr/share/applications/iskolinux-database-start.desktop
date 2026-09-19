@@ -1,0 +1,7 @@
+[Desktop Entry]
+Type=Application
+Name=Adatbázis-szerver indítása
+Comment=MariaDB és phpMyAdmin indítása (érettségi adatbázis-feladatokhoz)
+Exec=/usr/local/bin/iskolinux-database start
+Icon=network-server-database
+Categories=Development;Database;Education;

@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 1080" width="1920" height="1080">
+<!-- IskoLinux háttérkép. Az @BUILD_DATE@ helyére építéskor a dátum kerül. -->
+<defs>
+<radialGradient id="alap" cx="0.66" cy="0.5" r="0.75">
+<stop offset="0" stop-color="#16201c"/><stop offset="1" stop-color="#0d1311"/>
+</radialGradient>
+<pattern id="kockas" width="40" height="40" patternUnits="userSpaceOnUse">
+<path d="M40 0H0V40" fill="none" stroke="#1b2622" stroke-width="1.5"/>
+</pattern>
+</defs>
+<rect width="1920" height="1080" fill="url(#alap)"/>
+<rect width="1920" height="1080" fill="url(#kockas)"/>
+<g transform="translate(1086 190) scale(3.6)">
+<path d="M57 36C45 28 29 26 14 30V94C29 90 45 92 57 100Z" fill="#5cc3ae"/>
+<path d="M63 36C75 28 91 26 106 30V94C91 90 75 92 63 100Z" fill="#5cc3ae"/>
+<path d="M24 50H47M24 60H47M24 70H40" stroke="#111816" stroke-opacity="0.6" stroke-width="3.5" stroke-linecap="round" fill="none"/>
+<path d="M72 53L80 60L72 67" stroke="#f0c75e" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+<path d="M84 71H96" stroke="#f0c75e" stroke-width="5" stroke-linecap="round" fill="none"/>
+</g>
+<text x="1302" y="640" text-anchor="middle" font-family="DejaVu Serif" font-weight="bold" font-size="76" fill="#e4ebe8">Isko<tspan fill="#5cc3ae">Linux</tspan></text>
+<text x="1302" y="690" text-anchor="middle" font-family="DejaVu Sans" font-size="22" letter-spacing="3" fill="#9aaba5">DEBIAN 13 · ÉPÍTVE: @BUILD_DATE@</text>
+</svg>

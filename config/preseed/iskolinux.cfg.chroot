@@ -1,0 +1,4 @@
+# Előre megválaszolt telepítési kérdések (a csomagok telepítése előtt töltődik be)
+phpmyadmin phpmyadmin/reconfigure-webserver multiselect apache2
+phpmyadmin phpmyadmin/dbconfig-install boolean false
+ttf-mscorefonts-installer msttcorefonts/accepted-mscorefonts-eula select true

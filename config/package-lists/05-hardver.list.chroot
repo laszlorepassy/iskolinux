@@ -1,0 +1,21 @@
+# A lehető legszélesebb hardvertámogatás: firmware-ek, mikrokód, grafika, Secure Boot
+firmware-linux
+firmware-linux-nonfree
+firmware-misc-nonfree
+firmware-amd-graphics
+firmware-intel-graphics
+firmware-intel-sound
+firmware-sof-signed
+firmware-iwlwifi
+firmware-realtek
+firmware-atheros
+firmware-brcm80211
+firmware-mediatek
+firmware-libertas
+bluez-firmware
+amd64-microcode
+intel-microcode
+mesa-vulkan-drivers
+va-driver-all
+shim-signed
+grub-efi-amd64-signed
